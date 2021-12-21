@@ -29,19 +29,25 @@ const TopBar = () => {
       </Lead>
       <Flex.Row>
         <Link href="/">
-          <Paragraph themeActive={false} color="white" themed={theme}>
-            Home
-          </Paragraph>
+          <a>
+            <Paragraph themeActive={false} color="white" themed={theme}>
+              Home
+            </Paragraph>
+          </a>
         </Link>
-        <Link href="/create-item">
-          <Paragraph themeActive={false} color="white" themed={theme}>
-            Sell NFTs
-          </Paragraph>
+        <Link href="/create_nft">
+          <a>
+            <Paragraph themeActive={false} color="white" themed={theme}>
+              Sell NFTs
+            </Paragraph>
+          </a>
         </Link>
         <Link href="/creator-dashboard">
-          <Paragraph themeActive={false} color="white" themed={theme}>
-            Dasboard
-          </Paragraph>
+          <a>
+            <Paragraph themeActive={false} color="white" themed={theme}>
+              Dasboard
+            </Paragraph>
+          </a>
         </Link>
         <Switch
           onColor={colorsTheme.light.background}

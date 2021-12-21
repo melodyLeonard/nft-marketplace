@@ -1,13 +1,14 @@
 import axios from 'axios';
 import ethers from 'ethers';
-import Web3Modal from 'web3modal';
+import { create as ipfsHttpClient } from 'ipfs-http-client';
+import { useRouter } from 'next/router';
 import { useState } from 'react';
+import Web3Modal from 'web3modal';
 import NFT from '../../artifacts/contracts/NFT.sol/NFT.json';
 import Market from '../../artifacts/contracts/NFTMarket.sol/NFTMarketplace.json';
 import { nftAddress, nftmarketAddress } from '../../config';
 import { attachLoader } from '../functions/global.function';
 import { actions, useDispatch, useStore } from '../reducers/nftReducers';
-import { create as ipfsHttpClient } from 'ipfs-http-client';
 
 interface ILoading {
   getAllNFTs: boolean;
@@ -35,7 +36,7 @@ export const useNFTs = () => {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState<ILoading>(initialLoading);
   const activate = attachLoader(setLoading);
-
+  const router = useRouter();
   // load all nfts from blockchain
   const getAllNFTs = activate('getAllNFts', async (): Promise<any> => {
     try {
@@ -101,26 +102,59 @@ export const useNFTs = () => {
 
   const upLoadFiletoNTFS = activate('upLoadFiletoNTFS', async (file): Promise<any> => {
     try {
-      const data = await client.add(file, {
+      const res = await client.add(file, {
         progress: (p: any) => console.log('\n\n------>', p),
       });
-      return `https//ipfs.infura.io/ipfs/${data?.path}`;
+      return `https//ipfs.infura.io/ipfs/${res?.path}`;
+    } catch (err: any) {
+      console.log(err);
+    }
+  });
+
+  const createSale = activate('createSale', async ({ url, price }): Promise<any> => {
+    try {
+      const web3Modal = new Web3Modal();
+      const connection = await web3Modal.connect();
+      const provider = new ethers.providers.Web3Provider(connection);
+
+      const signer = provider.getSigner();
+      let contract = new ethers.Contract(nftAddress, NFT.abi, signer);
+      let transaction = await contract.createToken(url);
+      let tx = await transaction.wait();
+
+      let event = tx.events[0];
+      let value = event.args[2];
+      let tokenId = value.toNumber();
+
+      const _price = ethers.utils.parseUnits(price, 'ether');
+      contract = new ethers.Contract(nftmarketAddress, Market.abi, signer);
+      let listingPrice = await contract.getListingPrice();
+      listingPrice = listingPrice.toString();
+
+      transaction = await contract.createMarketItem(nftAddress, tokenId, _price, {
+        value: listingPrice,
+      });
+      await transaction.wait();
+      router.push;
     } catch (err: any) {
       console.log(err);
     }
   });
 
   const createItem = activate('upLoadFiletoNTFS', async (formInput: IItem): Promise<any> => {
-    try {
-      const { name, description, price, fileURL } = formInput;
-      if (!name || !description || !price || !fileURL) return;
+    const { name, description, price, fileURL } = formInput;
+    if (!name || !description || !price || !fileURL) return;
 
-      const data = JSON.stringify({
-        name,
-        description,
-        image: fileURL,
-        price,
-      });
+    const data = JSON.stringify({
+      name,
+      description,
+      image: fileURL,
+      price,
+    });
+    try {
+      const res = await client.add(data);
+      const url = `https//ipfs.infura.io/ipfs/${res?.path}`;
+      createSale({ url, price });
     } catch (err: any) {
       console.log(err);
     }
@@ -134,6 +168,7 @@ export const useNFTs = () => {
     getAllNFTs,
     buyNFT,
     upLoadFiletoNTFS,
+    createItem,
   };
 };
 

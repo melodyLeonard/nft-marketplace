@@ -20,11 +20,6 @@ const colorMapper: any = {
   primary: '#081241',
 };
 
-const themeColorMapper: any = {
-  dark: colorsTheme.dark.text,
-  light: colorsTheme.light.text,
-};
-
 const sizeMapper: any = {
   sm: '12',
   normal: '14',
