@@ -5,6 +5,7 @@ module.exports = {
     domains: [
       'thumbor.forbes.com',
       'cdn.vox-cdn.com',
+      'ipfs.infura.io',
       'lh3.googleusercontent.com',
       'encrypted-tbn0.gstatic.com',
     ],

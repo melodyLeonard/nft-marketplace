@@ -1,5 +1,5 @@
 import axios from 'axios';
-import ethers from 'ethers';
+import { ethers } from 'ethers';
 import { create as ipfsHttpClient } from 'ipfs-http-client';
 import { useRouter } from 'next/router';
 import { useState } from 'react';
@@ -12,6 +12,9 @@ import { actions, useDispatch, useStore } from '../reducers/nftReducers';
 
 interface ILoading {
   getAllNFTs: boolean;
+  upLoadFiletoNTFS: boolean;
+  createSale: boolean;
+  createItem: boolean;
 }
 
 interface IItem {
@@ -23,12 +26,16 @@ interface IItem {
 
 const initialLoading = {
   getAllNFTs: false,
+  upLoadFiletoNTFS: false,
+  createSale: false,
+  createItem: false,
 };
 
 const client = ipfsHttpClient({
-  host: 'ipfs.infura.io/api/v0',
+  host: 'ipfs.infura.io',
   port: 5001,
   protocol: 'https',
+  apiPath: '/api/v0',
 });
 
 export const useNFTs = () => {
@@ -37,20 +44,22 @@ export const useNFTs = () => {
   const [loading, setLoading] = useState<ILoading>(initialLoading);
   const activate = attachLoader(setLoading);
   const router = useRouter();
+
   // load all nfts from blockchain
   const getAllNFTs = activate('getAllNFts', async (): Promise<any> => {
     try {
       const provider = new ethers.providers.JsonRpcProvider();
       const tokenContract = new ethers.Contract(nftAddress, NFT.abi, provider);
       const marketContract = new ethers.Contract(nftmarketAddress, Market.abi, provider);
-      const data = await marketContract.fetchMarketItems();
+      let data = await marketContract.fetchMarketItems();
+      console.log(data);
 
-      const items = await Promise.all(
+      data = await Promise.all(
         data.map(async (item: any) => {
           const tokenUri = await tokenContract.tokenURI(item.tokenId);
           const meta = await axios.get(tokenUri);
-          let price = ethers.utils.formatUnits(item.price.toString(), 'ether');
-          let eachItem = {
+          const price = ethers.utils.formatUnits(item.price.toString(), 'ether');
+          const eachItem = {
             tokenId: item.tokenId.toNumber(),
             seller: item.seller,
             owner: item.owner,
@@ -63,11 +72,14 @@ export const useNFTs = () => {
         }),
       );
 
+      console.log('------>', { data });
+
       dispatch({
         type: actions.LOADEDE_NFT_SUCCESS,
-        payload: items,
+        payload: data,
       });
     } catch (err: any) {
+      console.info('------>', { err });
       dispatch({
         type: actions.LOADED_NFT_ERROR,
         payload: err.message,
@@ -102,10 +114,8 @@ export const useNFTs = () => {
 
   const upLoadFiletoNTFS = activate('upLoadFiletoNTFS', async (file): Promise<any> => {
     try {
-      const res = await client.add(file, {
-        progress: (p: any) => console.log('\n\n------>', p),
-      });
-      return `https//ipfs.infura.io/ipfs/${res?.path}`;
+      const res = await client.add(file);
+      return `https://ipfs.infura.io/ipfs/${res?.path}`;
     } catch (err: any) {
       console.log(err);
     }
@@ -116,8 +126,8 @@ export const useNFTs = () => {
       const web3Modal = new Web3Modal();
       const connection = await web3Modal.connect();
       const provider = new ethers.providers.Web3Provider(connection);
-
       const signer = provider.getSigner();
+
       let contract = new ethers.Contract(nftAddress, NFT.abi, signer);
       let transaction = await contract.createToken(url);
       let tx = await transaction.wait();
@@ -135,13 +145,13 @@ export const useNFTs = () => {
         value: listingPrice,
       });
       await transaction.wait();
-      router.push;
+      router.push('/');
     } catch (err: any) {
       console.log(err);
     }
   });
 
-  const createItem = activate('upLoadFiletoNTFS', async (formInput: IItem): Promise<any> => {
+  const createItem = activate('createItem', async (formInput: IItem): Promise<any> => {
     const { name, description, price, fileURL } = formInput;
     if (!name || !description || !price || !fileURL) return;
 
@@ -153,7 +163,7 @@ export const useNFTs = () => {
     });
     try {
       const res = await client.add(data);
-      const url = `https//ipfs.infura.io/ipfs/${res?.path}`;
+      const url = `https://ipfs.infura.io/ipfs/${res?.path}`;
       createSale({ url, price });
     } catch (err: any) {
       console.log(err);

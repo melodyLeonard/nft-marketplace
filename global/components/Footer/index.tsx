@@ -6,7 +6,6 @@ import colorsTheme from '../../theme/colors.theme';
 
 const Footer = () => {
   const [theme] = useTheme();
-  console.log(theme);
 
   return (
     <FooterWrapper theme={theme}>
